@@ -1,0 +1,65 @@
+#!/usr/bin/env python3
+"""
+Usage: sman <command> <option>
+
+EXAMPLE
+    Finding out what -A does when used with ls
+    sman ls -A
+"""
+
+# TODO We can only support options right now, because the double space after the option has been taken into concideration, whereas you wouldn't, if you where only searching for usual keywords.
+
+
+import re
+import sys
+import subprocess
+
+
+def man_page_content(command):
+    cmd = ['man', '-P', 'cat', command]
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                              stderr=subprocess.PIPE,)
+    out, err = p.communicate()
+    return out
+
+
+if __name__ == '__main__':
+    args = sys.argv[1:]
+    if len(args) != 2:
+        print(__doc__.strip())
+        raise SystemExit
+
+    command = args[0]
+    keyword = args[1]
+    color = "154"
+
+    man_page_content = man_page_content(command).decode('utf-8')
+    sections = re.findall("\n([A-Z ]+)(?=\n)(.*?)(?=\n[A-Z ]+\n)", man_page_content, re.DOTALL)
+    # Do not search following sections
+    drop = ['name',
+            'author',
+            'authors',
+            'bug',
+            'bugs',
+            'reporting bugs',
+            'copyright',
+            'see also']
+    
+    for title, body in sections:
+        if title.strip().lower() not in drop:
+            matches = re.findall("\n\s*(" + keyword + ".*?)  (.*?)(?=\n\s*-)", body, re.DOTALL)
+            if matches:
+                pass
+            else:
+                matches = re.findall("\n\s*(" + keyword + ".*?)  (.*?)(?=\n)", body, re.DOTALL)
+            if matches:
+                print("\n" + title.strip())
+                for opt, desc in matches:
+                    print("\033[38;5;" + color + "m" + str(opt) + "\033[0m" + desc)
+                
+
+
+    # TODO Ability to do 'tar --update'
+    # TODO Ability to do 'tar -xvzf'
+    # Not So TODO (This one is unnecessarily hard. But it is the sort of hardness that you should have picked, had you been in a startup.)Ability to do 'tar xvzf'
+
